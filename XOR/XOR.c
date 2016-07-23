@@ -122,12 +122,12 @@ char* decToHex(unsigned char input){
 char* generateKey(char c, int len){
 	char* key = malloc(sizeof(char) * len);
 	int i = 0;
-	char* hex = NULL;
+	char* hex = decToHex(c);
 	for(i=0; i < len; i = i + 2){
-		hex = decToHex(c);
 		key[i] = hex[0];
 		key[i+1] = hex[1];
 	}
+	free(hex);
 	return key;
 }
 
