@@ -13,20 +13,18 @@ char* generateKey(char* s, int len);
 void extendedHexToDec(char* hex, unsigned char* output, int bufferLen);
 char* hexToString(char* input);
 char* stringToHex(char* string);
-
+void encryptXOR(char* inputFile, char* outputFile, char* key);
 
 int main(int argc, char* argv[]){
 	if(argc != 4){
 		printf("ERROR: INVALID ARGUMENTS\n");
 		printf("    ./run [key] [input file] [output file]\n");
+		return EXIT_FAILURE;
 	}
 	char* key = argv[1];
 	char* inputFile = argv[2];
 	char* outputFile = argv[3];
-	char* input = readInput(inputFile);
-
-
-	free(input);
+	encryptXOR(inputFile, outputFile, key);
 	return EXIT_SUCCESS;
 }
 
@@ -173,8 +171,26 @@ char* stringToHex(char* string){
 
 //writes an encrypted output file
 void encryptXOR(char* inputFile, char* outputFile, char* key){
-	int bufferLen = strlen(key);
-	char* keyHex = generateKey(key, bufferLen);
+	int keyLen = strlen(key);
+	FILE* input = fopen(inputFile, "r");
+	FILE* output = fopen(outputFile, "w");
+	char c = fgetc(input);
+	int i = 0;
+	char* xorHex = malloc(3);
+	char* tempHex = malloc(3); // so i can free in the loop
+	while(c != EOF){
+		free(tempHex);
+		free(xorHex);
+		tempHex = decToHex(c);
+		xorHex = hexXOR(tempHex, decToHex(key[i]));
+		if(i+1 < keyLen) i++;
+		else i = 0;
+		fwrite(xorHex, 1, 2, output);
+		c = fgetc(input);
+	}
 
+	fclose(output);
+	fclose(input);
+	printf("\nCompleted\n");
 }
 
