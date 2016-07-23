@@ -45,25 +45,28 @@ int main(int argc, char* argv[]){
 
 //Xors two hex numbers together
 char* hexXOR(char* first, char* second){
+	//checking buffer len
 	int firstLen = strlen(first);
 	int secondLen = strlen(second);
 	if(firstLen != secondLen){
 		printf("ERROR: BUFFERS OF UNEQUAL SIZE\n");
 		return NULL;
 	}
+	//getting some byte space
 	int bufferLen = firstLen / 2;
 	unsigned char hexOne[bufferLen];
 	unsigned char hexTwo[bufferLen];
-
+	//converting hexadecimal into pure byte code
 	extendedHexToDec(first, hexOne, bufferLen);
 	extendedHexToDec(second, hexTwo, bufferLen);
 
+	//xor'ing byte by byte
 	int i = 0;
 	unsigned char result[bufferLen];
 	for(i=0; i < bufferLen; i++){
 		result[i] = hexOne[i] ^ hexTwo[i];
 	}
-
+	//setting up output which is to be in hex
 	char* output = malloc(firstLen + 1);
 	char* tempHex = NULL;
 	int index = 0;

@@ -14,17 +14,21 @@ void extendedHexToDec(char* hex, unsigned char* output, int bufferLen);
 char* hexToString(char* input);
 char* stringToHex(char* string);
 void encryptXOR(char* inputFile, char* outputFile, char* key);
+void decryptXOR(char* inputFile, char* outputFile, char* key);
 
 int main(int argc, char* argv[]){
-	if(argc != 4){
+	if(argc != 5){
 		printf("ERROR: INVALID ARGUMENTS\n");
-		printf("    ./run [key] [input file] [output file]\n");
+		printf("    ./run [key] [input file] [output file] [1/0]\n");
 		return EXIT_FAILURE;
 	}
 	char* key = argv[1];
 	char* inputFile = argv[2];
 	char* outputFile = argv[3];
-	encryptXOR(inputFile, outputFile, key);
+	int choice = atoi(argv[4]);
+	if(choice == 1)encryptXOR(inputFile, outputFile, key);
+	else if(choice == 0)decryptXOR(inputFile, outputFile, key);
+	else printf("ERROR: INVALID 1/0 FLAG, ENTER 1 FOR ENCRYPT OR 0 FOR DECRYPT\n");
 	return EXIT_SUCCESS;
 }
 
@@ -189,6 +193,39 @@ void encryptXOR(char* inputFile, char* outputFile, char* key){
 		c = fgetc(input);
 	}
 
+	fclose(output);
+	fclose(input);
+	free(tempHex);
+	free(xorHex);
+	printf("\nCompleted\n");
+}
+
+//writes an decrypted output file
+//assumes input is valid hexadecimal (multiple of 2)
+//will NOT tolerate /n. 
+void decryptXOR(char* inputFile, char* outputFile, char* key){
+	int keyLen = strlen(key);
+	FILE* input = fopen(inputFile, "r");
+	FILE* output = fopen(outputFile, "w");
+	int i = 0;
+	char* xorHex = malloc(3);
+	char* tempHex = malloc(3); // so i can free in the loop
+	tempHex[0] = fgetc(input);
+	tempHex[1] = fgetc(input);
+	tempHex[2] = '\0';
+	unsigned char c = 0;
+	while(tempHex[0] != EOF){
+		free(xorHex);
+		xorHex = hexXOR(tempHex, decToHex(key[i]));
+		if(i+1 < keyLen) i++;
+		else i = 0;
+		c = hexToDec(xorHex);
+		fwrite(&c, 1, 1, output);
+		tempHex[0] = fgetc(input);
+		tempHex[1] = fgetc(input);
+	}
+
+	free(tempHex);
 	fclose(output);
 	fclose(input);
 	printf("\nCompleted\n");

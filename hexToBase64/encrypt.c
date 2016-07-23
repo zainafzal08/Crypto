@@ -52,7 +52,7 @@ void hexTo64(char* input){
 		//grab the last 2 bits
 		temp = decHex & getFinalTwo;
 
-		//get first 6 bit block
+		//get first 6 bits
 		unsigned char first = decHex >> 2;
 		printf("%c", decTo64(first));
 
@@ -65,7 +65,7 @@ void hexTo64(char* input){
 		temp2 = decHex & getFinalFour;
 		//shift over by 4 to remove last 4 bits
 		decHex = decHex >> 4;
-		//replace first 4 bits (now 0000) with 00temp
+		//replace first 4 bits (now 0000) with 00[temp]
 		temp = temp << 4;
 		decHex = decHex | temp;
 		//read in this as the next 6 bit block
@@ -80,12 +80,12 @@ void hexTo64(char* input){
 		temp = decHex & getFinalSix;
 		//shift over by 6 to remvoe last 6
 		decHex = decHex >> 6;
-		//repalce first 6 digits with 00temp
+		//repalce first 6 digits with 00[temp]
 		temp2 = temp2 << 2;
 		decHex = decHex | temp2;
 		//read in as the next 6 bit block
 		printf("%c", decTo64(decHex));
-		//read in temp as 6 bit block after clearing the first 2 spots
+		//read in temp as 6 bit block
 		printf("%c", decTo64(temp));
 		//progress
 		index = index + 6;
