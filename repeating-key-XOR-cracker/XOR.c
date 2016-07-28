@@ -1,103 +1,39 @@
+#ifdef BASE
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
+#define BASE
+#endif
+
+#include "hex.h"
+#include "singleCharXor.h"
+#include "repeatedCharXor.h"
+#include "base64.h"
 
 #define TRUE 1
 #define FALSE 0
 
-unsigned char hexToDec(char* hex);
-char* decToHex(unsigned char input);
-char* hexXOR(char* first, char* second);
-char* generateKey(char* s, int len);
-void extendedHexToDec(char* hex, unsigned char* output, int bufferLen);
-char* hexToString(char* input);
-char* stringToHex(char* string);
-char* encryptRKXOR(char* input, char* key);
-char* decryptRKXOR(char* input, char* key);
+typedef struct _Hamming{
+	int dis;
+	int keyLen;
+}Hamming;
+
 int getHammingDis(char* str1, char* str2);
 int compareBits(unsigned char a, unsigned char b);
+char* crackRKXOR(char* input);
+void runTests();
+void pushArray(Hamming* array, int num, int index, int size, int keyLen);
+void pushIfSmall(Hamming* array, int keyLen, int num, int size);
+char* getSubString(char* string, int len, int index);
+void initilaiseHammingArray(Hamming* smallestHamming, int size);
 
 int main(int argc, char* argv[]){
-	printf("%d\n", getHammingDis("this is a test", "wokka wokka!!!")); 
+	runTests();
+	printf("%s\n", crackRKXOR("AABBCCDDEE"));
 	return EXIT_SUCCESS;
-}
-
-//Xors two hex numbers together
-char* hexXOR(char* first, char* second){
-	int firstLen = strlen(first);
-	int secondLen = strlen(second);
-	if(firstLen != secondLen){
-		printf("HEX_XOR: BUFFERS OF UNEQUAL SIZE\n");
-		printf("   %s\n", first);
-		printf("   %s\n", second);
-		return NULL;
-	}
-	int bufferLen = firstLen / 2;
-	unsigned char hexOne[bufferLen];
-	unsigned char hexTwo[bufferLen];
-
-	extendedHexToDec(first, hexOne, bufferLen);
-	extendedHexToDec(second, hexTwo, bufferLen);
-
-	int i = 0;
-	unsigned char result[bufferLen];
-	for(i=0; i < bufferLen; i++){
-		result[i] = hexOne[i] ^ hexTwo[i];
-	}
-
-	char* output = malloc(firstLen + 1);
-	char* tempHex = NULL;
-	int index = 0;
-	for(i=0; i < firstLen; i = i + 2){
-		tempHex = decToHex(result[index]);
-		output[i] = tempHex[0];
-		output[i+1] = tempHex[1];
-		index++;
-	}
-	output[firstLen] = '\0';
-	free(tempHex);
-	return output;
-}
-
-//single hex to dec converter
-unsigned char hexToDec(char* hex){
-	//this is prob like the least efficient way to do this 
-	//lmao it works though
-	char* matrix = "0123456789ABCDEF";
-	char* matrixU = "0123456789abcdef";
-	unsigned char result = 0;
-	int i = 0;
-	for(i=0; i < 16; i++){
-		if(matrix[i] == hex[1] || matrixU[i] == hex[1]){
-			result = i;
-			break;
-		}
-	}
-
-	for(i=0; i < 16; i++){
-		if(matrix[i] == hex[0] || matrixU[i] == hex[0]){
-			result = result + 16*i;
-			break;
-		}
-	}
-
-	return result;
-}
-
-//single decimal to hex converter
-char* decToHex(unsigned char input){
-	char* matrix = "0123456789abcdef";
-	char* hex = malloc(3);
-	hex[2] = '\0';
-	//get first hex value
-	unsigned char firstHex = input >> 4;
-	hex[0] = matrix[firstHex];
-	//get second hex value
-	unsigned char secondHex = input << 4;
-	secondHex = secondHex >> 4;
-	hex[1] = matrix[secondHex];
-	return hex;
 }
 
 //generates a repeated key XOR encryption
@@ -115,117 +51,6 @@ char* generateKey(char* s, int len){
 		}
 	}
 	return key;
-}
-
-void extendedHexToDec(char* hexIn, unsigned char* output, int bufferLen){
-	int i = 0;
-	int index = 0;
-	char hex[3];
-	hex[2] = '\0';
-	for(i=0; i < bufferLen; i++){
-		hex[0] = hexIn[index];
-		hex[1] = hexIn[index+1];
-		index = index + 2;
-		output[i] = hexToDec(hex);
-	}
-}
-
-//takes in hex input and converts to text (ASCII)
-char* hexToString(char* input){
-	char hex[3]; hex[2] = '\0';
-	int index = 0;
-	int i = 0;
-	char* output = malloc(strlen(input)/2 + 1);
-	while(index < strlen(input)){
-		hex[0] = input[index];
-		hex[1] = input[index+1];
-		index = index + 2;
-		output[i] = hexToDec(hex);
-		i++;
-	}
-	output[strlen(input)/2] = '\0';
-	return output;
-}
-
-//takes in a string and converts to a hex representation
-char* stringToHex(char* string){
-	int sLen = strlen(string);
-	int hLen = 2*sLen;
-	char* hex = malloc(hLen);
-	int i = 0;
-	int hexIndex = 0;
-	char* tempHex = malloc(3); //just so i can put a free into the loop
-	for(i=0; i < sLen; i++){
-		free(tempHex);
-		tempHex = decToHex(string[i]);
-		hex[hexIndex] = tempHex[0];
-		hex[hexIndex+1] = tempHex[1];
-		hexIndex = hexIndex + 2;
-	}
-	free(tempHex);
-	return hex;
-}
-
-//encrypts a text string with repeating key XOR
-//outputs in hex
-char* encryptRKXOR(char* input, char* key){
-	int keyLen = strlen(key);
-	int strIndex = 0;
-	int sLen = strlen(input);
-	char* output = malloc(sLen*2);
-	int outIndex = 0;
-	char c = input[strIndex];
-	strIndex++;
-	int i = 0;
-	char* xorHex = malloc(3);
-	char* tempHex = malloc(3); // so i can free in the loop
-	while(c != '\0'){
-		free(tempHex);
-		free(xorHex);
-		tempHex = decToHex(c);
-		xorHex = hexXOR(tempHex, decToHex(key[i]));
-		if(i+1 < keyLen) i++;
-		else i = 0;
-		output[outIndex] = xorHex[0];
-		output[outIndex+1] = xorHex[1];
-		outIndex = outIndex + 2;
-		c = input[strIndex];
-		strIndex++;
-	}
-	free(tempHex);
-	free(xorHex);
-	return output;
-}
-
-//takes in a hex input and decrypts it to text
-char* decryptRKXOR(char* input, char* key){
-	int keyLen = strlen(key);
-	int outLen = strlen(input)/2;
-	int i = 0;
-	int inIndex = 0;
-	int outIndex = 0;
-	char* output = malloc(outLen);
-	char* xorHex = malloc(3);
-	char* tempHex = malloc(3); // so i can free in the loop
-	tempHex[0] = input[inIndex];
-	tempHex[1] = input[inIndex+1];
-	tempHex[2] = '\0';
-	inIndex = inIndex + 2;
-	unsigned char c = 0;
-	while(tempHex[0] != '\0'){
-		free(xorHex);
-		xorHex = hexXOR(tempHex, decToHex(key[i]));
-		if(i+1 < keyLen) i++;
-		else i = 0;
-		c = hexToDec(xorHex);
-		output[outIndex] = c;
-		outIndex++;
-		tempHex[0] = input[inIndex];
-		tempHex[1] = input[inIndex+1];
-		inIndex = inIndex + 2;
-	}
-	free(tempHex);
-	return output;
 }
 
 int getHammingDis(char* str1, char* str2){
@@ -263,41 +88,92 @@ int compareBits(unsigned char a, unsigned char b){
 	return diff;
 }
 
-//cracks a given single char XOR encrypted hex
-char* crackSKXOR(char* hex){
-	int keyLen = strlen(hex);
-	char* alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-	int alphLen = strlen(alphabet);
-	int i = 0;
-	char* key = NULL;
-	char* result = NULL;
-	double currScore = 0;
-	double maxScore = 0;
-	char* bestMatch = NULL;
-	char* resultString = NULL;
-	char* bestMatchHex = NULL;
-	char* bestMatchKey = NULL;
-
-	char charString[2];
-	charString[1] = '\0';
-	//frequency analysis
-	for(i=0; i < alphLen; i++){
-		charString[0] = alphabet[i];
-		key = generateKey(charString, keyLen);
-		result = hexXOR(hex, key);
-		resultString = hexToString(result);
-		currScore = score(resultString);
-		if (currScore > maxScore){
-			maxScore = currScore;
-			bestMatch = resultString;
-			bestMatchHex = result;
-			bestMatchKey = key;
+char* crackRKXOR(char* input){
+	//3 smallest hamming distances
+	Hamming smallestHamming[3];
+	initilaiseHammingArray(smallestHamming, 3);
+	//guess a key length
+	int keyLength = 2;
+	int currHamDis = 0;
+	int currKeyLen = keyLength;
+	char* temp1 = NULL; 
+	char* temp2 = NULL;
+	for(currKeyLen = keyLength; currKeyLen <= 40; currKeyLen++){
+		temp1 = getSubString(input, currKeyLen, 0);
+		temp2 = getSubString(input, currKeyLen, currKeyLen);
+		if(temp1 != NULL && temp2 != NULL){
+			currHamDis = getHammingDis(temp1, temp2);
+			//see if it is small enough
+			pushIfSmall(smallestHamming, currHamDis, 3, currKeyLen);
 		}
 	}
-	//return
-	return bestMatch;
+	return "LOL";
 }
 
-char* crackRKXOR(char* input){
-	
+void runTests(){
+	printf("running tests");
+	assert(getHammingDis("this is a test", "wokka wokka!!!") == 37);
+	printf(".");
+	assert(strcmp(crackSKXOR("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"), "Cooking MC's like a pound of bacon") == 0);
+	printf(".");
+	assert(strcmp(hexTo64("49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"), "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t") == 0);
+	printf(".");
+	assert(strcmp(hexXOR("1c0111001f010100061a024b53535009181c", "686974207468652062756c6c277320657965"), "746865206b696420646f6e277420706c6179") == 0);
+	printf(".");
+	Hamming array[3];
+	initilaiseHammingArray(array, 3);
+	pushIfSmall(array, 32, 10, 3);
+	pushIfSmall(array, 40, 500, 3);
+	pushIfSmall(array, 6, 3, 3);
+	pushIfSmall(array, 3, 2, 3);
+	assert(array[0].dis == 2 && array[0].keyLen == 3);
+	assert(array[1].dis == 3 && array[1].keyLen == 6);
+	assert(array[2].dis == 10 && array[2].keyLen == 32);
+	printf(".");
+	assert(strcmp(getSubString("lmao really", 3, 0), "lma") == 0);
+	assert(strcmp(getSubString("lmao really", 3, 3), "o r") == 0);
+	printf("\nall tests complete\n");
+}
+
+void pushIfSmall(Hamming* array, int keyLen, int num, int size){
+	int i = 0;
+	for(i=0; i < 3; i++){
+		if(array[i].dis > num){
+			pushArray(array, num, i, size, keyLen);
+			break;
+		}
+	}
+}
+
+void pushArray(Hamming* array, int num, int index, int size, int keyLen){
+	int i = 0;
+	for(i=size-1; i >= index; i--){
+		if(i-1 < 0) break;
+		array[i].dis = array[i-1].dis;
+		array[i].keyLen = array[i-1].keyLen;
+	}
+	array[index].dis = num;
+	array[index].keyLen = keyLen;
+}
+
+char* getSubString(char* string, int len, int index){
+	int strLen = strlen(string);
+	if(index+len > strLen) return NULL;
+	char* output = malloc(len+1);
+	int i = index;
+	int j = 0;
+	for(i=index; i < index+len; i++){
+		output[j] = string[i];
+		j++;
+	}
+	output[len] = '\0';
+	return output;
+}
+
+void initilaiseHammingArray(Hamming* smallestHamming, int size){
+	int i = 0;
+	for(i=0; i < size; i++){
+		smallestHamming[i].dis = 100;
+		smallestHamming[i].keyLen = 0;
+	}
 }
