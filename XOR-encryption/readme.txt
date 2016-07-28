@@ -1,3 +1,5 @@
+This program will encrypt or decrypt a message using repeating key XOR
+
 when using the flag 1
 	this program reads in a text file, and using a
 	key given by the user will encrypt the text file
