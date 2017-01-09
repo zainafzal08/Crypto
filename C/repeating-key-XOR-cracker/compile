@@ -1,0 +1,1 @@
+gcc -Wall -Werror -o run XOR.c hex.c singleCharXor.c repeatedCharXor.c base64.c
